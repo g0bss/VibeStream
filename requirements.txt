@@ -1,0 +1,7 @@
+redis>=5.0
+cassandra-driver>=3.29
+# Python 3.12+ removeu o módulo asyncore; sem ele o cassandra-driver pode falhar
+# no Windows/macOS com "Unable to load a default connection class".
+pyasyncore; python_version >= "3.12"
+pymongo>=4.6
+neo4j>=5.20

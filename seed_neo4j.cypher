@@ -49,20 +49,20 @@ MERGE (u2)-[:SEGUE]->(a1)
 MERGE (u2)-[:SEGUE]->(a2)
 MERGE (u3)-[:SEGUE]->(a2)
 
-MERGE (u1)-[:OUVIU {vezes: 5}]->(m1)
-MERGE (u1)-[:OUVIU {vezes: 3}]->(m2)
-MERGE (u1)-[:OUVIU {vezes: 2}]->(m3)
-MERGE (u1)-[:OUVIU {vezes: 1}]->(m4)
+MERGE (u1)-[o1:OUVIU]->(m1) SET o1.vezes = 5
+MERGE (u1)-[o2:OUVIU]->(m2) SET o2.vezes = 3
+MERGE (u1)-[o3:OUVIU]->(m3) SET o3.vezes = 2
+MERGE (u1)-[o4:OUVIU]->(m4) SET o4.vezes = 1
 
-MERGE (u2)-[:OUVIU {vezes: 4}]->(m1)
-MERGE (u2)-[:OUVIU {vezes: 6}]->(m2)
-MERGE (u2)-[:OUVIU {vezes: 7}]->(m5)
-MERGE (u2)-[:OUVIU {vezes: 3}]->(m6)
+MERGE (u2)-[o5:OUVIU]->(m1) SET o5.vezes = 4
+MERGE (u2)-[o6:OUVIU]->(m2) SET o6.vezes = 6
+MERGE (u2)-[o7:OUVIU]->(m5) SET o7.vezes = 7
+MERGE (u2)-[o8:OUVIU]->(m6) SET o8.vezes = 3
 
-MERGE (u3)-[:OUVIU {vezes: 5}]->(m3)
-MERGE (u3)-[:OUVIU {vezes: 2}]->(m4)
-MERGE (u3)-[:OUVIU {vezes: 8}]->(m5)
-MERGE (u3)-[:OUVIU {vezes: 4}]->(m7)
+MERGE (u3)-[o9:OUVIU]->(m3) SET o9.vezes = 5
+MERGE (u3)-[o10:OUVIU]->(m4) SET o10.vezes = 2
+MERGE (u3)-[o11:OUVIU]->(m5) SET o11.vezes = 8
+MERGE (u3)-[o12:OUVIU]->(m7) SET o12.vezes = 4
 
-MERGE (u4)-[:OUVIU {vezes: 6}]->(m7)
-MERGE (u4)-[:OUVIU {vezes: 5}]->(m8);
+MERGE (u4)-[o13:OUVIU]->(m7) SET o13.vezes = 6
+MERGE (u4)-[o14:OUVIU]->(m8) SET o14.vezes = 5;

@@ -1,0 +1,8 @@
+DEL sessao:usuario:9921
+HSET sessao:usuario:9921 musica_atual 401 tempo_reproducao 01:45 estado playing
+EXPIRE sessao:usuario:9921 1800
+DEL sessao:usuario:9922
+HSET sessao:usuario:9922 musica_atual 610 tempo_reproducao 02:10 estado paused
+EXPIRE sessao:usuario:9922 1800
+HGETALL sessao:usuario:9921
+TTL sessao:usuario:9921

@@ -1,0 +1,131 @@
+# VibeStream — ambiente local unificado (Redis + Cassandra + MongoDB + Neo4j)
+#
+# Subir tudo:      docker compose up -d
+# Ver status:      docker compose ps
+# Resetar dados:   docker compose down -v && docker compose up -d
+#
+# Os serviços *-seed rodam uma vez, aplicam a carga inicial e encerram (status "exited (0)").
+# O Cassandra demora ~1 a 2 minutos para ficar "healthy" na primeira subida.
+
+name: vibestream
+
+services:
+  # ---------------------------------------------------------------- Redis
+  # Estado atual da reprodução (Hash + TTL). Sem persistência em disco de
+  # propósito: a sessão é Soft State e pode ser reconstruída.
+  redis:
+    image: redis:7-alpine
+    container_name: vibestream-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [vibestream-net]
+
+  redis-seed:
+    image: redis:7-alpine
+    container_name: vibestream-redis-seed
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./redis/seed_redis.redis:/seed/seed_redis.redis:ro
+    entrypoint: ["sh", "-c", "redis-cli -h redis < /seed/seed_redis.redis"]
+    restart: "no"
+    networks: [vibestream-net]
+
+  # ------------------------------------------------------------ Cassandra
+  # Histórico de reprodução (query-first). Localmente roda 1 nó só, por isso
+  # o keyspace usa replication_factor 1 (em produção: 3 — ver 01_schema.cql).
+  cassandra:
+    image: cassandra:4.1
+    container_name: vibestream-cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: vibestream-cluster
+      CASSANDRA_DC: dc1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      # Limita a memória para rodar em notebook junto com os outros 3 bancos
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 40s
+    networks: [vibestream-net]
+
+  cassandra-seed:
+    image: cassandra:4.1
+    container_name: vibestream-cassandra-seed
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./cassandra:/scripts:ro
+    entrypoint:
+      - sh
+      - -c
+      - cqlsh cassandra 9042 -f /scripts/01_schema.cql && cqlsh cassandra 9042 -f /scripts/02_seed.cql && echo 'Cassandra seed OK'
+    restart: "no"
+    networks: [vibestream-net]
+
+  # -------------------------------------------------------------- MongoDB
+  # Catálogo (músicas, artistas). Scripts .js ou .sh colocados em
+  # ./mongo/init rodam automaticamente na PRIMEIRA subida (volume vazio).
+  mongo:
+    image: mongo:7
+    container_name: vibestream-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: vibestream
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [vibestream-net]
+
+  # ---------------------------------------------------------------- Neo4j
+  # Motor de recomendações. Browser: http://localhost:7474  (neo4j / vibestream123)
+  # A carga do grafo é feita pelo neo4j_service.py -> aplicar_seed().
+  neo4j:
+    image: neo4j:5
+    container_name: vibestream-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/vibestream123
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 512m
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p vibestream123 'RETURN 1' > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    networks: [vibestream-net]
+
+networks:
+  vibestream-net:
+    name: vibestream-net
+
+volumes:
+  cassandra_data:
+  mongo_data:
+  neo4j_data:
